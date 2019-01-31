@@ -183,6 +183,7 @@ namespace HoloToolkit.Unity.Preview.SpectatorView
         /// <param name="rot">Rotation of the marker (as seen from the HoloLens)</param>
         private void OnMarkerDetected(int markerId, Vector3 pos, Quaternion rot)
         {
+            Debug.Log("Marker Detected: " + markerId + pos.ToString() + rot.ToString());
             string newData = "|" + markerId + "|";
             StartCoroutine(ChangeBroadcastData(newData));
         }

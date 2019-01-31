@@ -147,7 +147,7 @@ namespace HoloToolkit.Unity.Preview.SpectatorView
             if (currentCaptureTimeout <= 0 && capturing)
             {
                 Debug.Log("Capture timed out");
-                StopCapture();
+                //StopCapture();
             }
         }
 

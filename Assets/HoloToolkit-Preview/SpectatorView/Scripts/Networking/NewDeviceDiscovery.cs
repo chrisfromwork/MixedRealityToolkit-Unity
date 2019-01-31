@@ -90,6 +90,8 @@ namespace HoloToolkit.Unity.Preview.SpectatorView
                     MarkerDetectionHololens = FindObjectOfType<MarkerDetectionHololens>();
                 }
                 StartAsClient();
+                MarkerDetectionHololens.StartCapture();
+
             }
             else
             {
