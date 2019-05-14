@@ -93,8 +93,9 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
         private Quaternion currentGripRotation = Quaternion.identity;
         private MixedRealityPose currentGripPose = MixedRealityPose.ZeroIdentity;
 
-        private bool controllerModelInitialized = false;
-        private bool isControllerModelLoaded = false;
+        private volatile bool controllerModelInitialized = false;
+        private Type controllerType = null;
+        private InputSourceType inputSourceType = InputSourceType.Other;
 
         #region Update data functions
 
@@ -503,16 +504,22 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
         /// <param name="interactionSourceState"></param>
         private void EnsureControllerModel(InteractionSourceState interactionSourceState)
         {
-            if (controllerModelInitialized ||
-                GetControllerVisualizationProfile() == null ||
-                !GetControllerVisualizationProfile().GetUseDefaultModelsOverride(GetType(), ControllerHandedness))
+            if (!controllerModelInitialized &&
+                controllerType != null)
             {
                 controllerModelInitialized = true;
-                return;
-            }
 
-            controllerModelInitialized = true;
-            CreateControllerModelFromPlatformSDK(interactionSourceState.source.id);
+                if (inputSourceType != InputSourceType.Controller ||
+                    GetControllerVisualizationProfile() == null ||
+                    !GetControllerVisualizationProfile().GetUseDefaultModelsOverride(GetType(), ControllerHandedness))
+                {
+                    base.TryRenderControllerModel(controllerType, inputSourceType);
+                }
+                else
+                {
+                    CreateControllerModelFromPlatformSDK(interactionSourceState.source.id);
+                }
+            }
         }
 
         #endregion Update data functions
@@ -521,20 +528,15 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
 
         protected override bool TryRenderControllerModel(Type controllerType, InputSourceType inputSourceType)
         {
-            // Intercept this call if we are using the default driver provided models.
+            this.controllerType = controllerType;
+            this.inputSourceType = inputSourceType;
+
             // Note: Obtaining models from the driver will require access to the InteractionSource.
             // It's unclear whether the interaction source will be available during setup, so we attempt to create
             // the controller model on an input update
-            if (!isControllerModelLoaded ||
-                GetControllerVisualizationProfile() == null ||
-                !GetControllerVisualizationProfile().GetUseDefaultModelsOverride(GetType(), ControllerHandedness))
-            {
-                controllerModelInitialized = true;
-                return base.TryRenderControllerModel(controllerType, inputSourceType);
-            }
-
-            return false;
+            return true;
         }
+
 
         private async void CreateControllerModelFromPlatformSDK(uint interactionSourceId)
         {
@@ -589,12 +591,10 @@ namespace Microsoft.MixedReality.Toolkit.WindowsMixedReality.Input
                 }
             }
 
-
-            isControllerModelLoaded = (gltfGameObject != null);
-            if (!isControllerModelLoaded)
+            if (gltfGameObject == null)
             {
-                Debug.LogWarning("Failed to create controller model from driver, defaulting to BaseController behavior");
-                TryRenderControllerModel(GetType(), InputSourceType.Controller);
+                Debug.LogWarning("Failed to obtain a controller model from the platform sdk, falling back to BaseController behavior.");
+                base.TryRenderControllerModel(controllerType, inputSourceType);
             }
         }
 
