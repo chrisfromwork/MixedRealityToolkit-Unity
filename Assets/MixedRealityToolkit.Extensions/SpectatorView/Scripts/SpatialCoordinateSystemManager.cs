@@ -17,13 +17,6 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         private SpectatorView spectatorView = null;
 
         /// <summary>
-        /// SpatialLocalizer used for setting up the coordinate system.
-        /// </summary>
-        [Tooltip("SpatialLocalizer used for setting up the coordinate system.")]
-        [SerializeField]
-        private SpatialLocalizer spatialLocalizer = null;
-
-        /// <summary>
         /// Scene root game object.
         /// </summary>
         [Tooltip("Scene root game object.")]
@@ -40,6 +33,7 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         public const string SpatialLocalizationMessageHeader = "LOCALIZE";
         readonly string[] supportedCommands = { SpatialLocalizationMessageHeader };
         private Dictionary<SocketEndpoint, SpatialCoordinateSystemMember> members = new Dictionary<SocketEndpoint, SpatialCoordinateSystemMember>();
+        private SpatialLocalizer spatialLocalizer = null;
 
         public void OnConnected(SocketEndpoint endpoint)
         {
@@ -104,6 +98,11 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         protected override void Awake()
         {
             RegisterCommands();
+
+            // For now, users will be the coordinate creator, spectators will be coordinate consumers.
+            spatialLocalizer = (spectatorView.Role == Role.User) ?
+                (SpatialLocalizer) GetComponent<ArUcoMarkerDetectorCoordinateCreatorSpatialLocalizer>() :
+                (SpatialLocalizer) GetComponent<ArUcoMarkerDetectorCoordinateConsumerSpatialLocalizer>();
         }
 
         protected override void OnDestroy()

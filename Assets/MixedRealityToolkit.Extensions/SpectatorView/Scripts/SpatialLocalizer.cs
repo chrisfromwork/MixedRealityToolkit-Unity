@@ -21,8 +21,6 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         /// </summary>
         protected abstract ISpatialCoordinateService SpatialCoordinateService { get; }
 
-        protected readonly object lockObject = new object();
-
         private string typeName;
 
         [Tooltip("Toggle to enable troubleshooting logging.")]
@@ -50,34 +48,30 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         /// <summary>
         /// Start a new spatial localization session, and return a token for that session.
         /// </summary>
-        /// <param name="role">The role of the requesting entity.</param>
         /// <param name="cancellationToken">The cancellation token to cancel this async operation.</param>
         /// <returns>The token representing this session, should be used for subsequent calls.</returns>
-        internal abstract Task<Guid> InitializeAsync(Role role, CancellationToken cancellationToken);
+        internal abstract Task<Guid> InitializeAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Deinitializes the session.
         /// </summary>
-        /// <param name="role">The role of the requesting entity.</param>
         /// <param name="token">The token representing the session.</param>
-        internal abstract void Uninitialize(Role role, Guid token);
+        internal abstract void Uninitialize(Guid token);
 
         /// <summary>
         /// Handles incoming message for the session.
         /// </summary>
-        /// <param name="role">The role of the requesting entity.</param>
         /// <param name="token">The token representing the session.</param>
         /// <param name="r">The binary reader for the message.</param>
-        internal abstract void ProcessIncomingMessage(Role role, Guid token, BinaryReader r);
+        internal abstract void ProcessIncomingMessage(Guid token, BinaryReader r);
 
         /// <summary>
         /// Attempts to localize the given session.
         /// </summary>
-        /// <param name="role">The role of the requesting entity.</param>
         /// <param name="token">The token representing the session.</param>
         /// <param name="writeAndSendMessage">A function that allows the spatialLocalizer to write and send content to other devices.</param>
         /// <param name="cancellationToken">The cancellation token to cancel this async operation.</param>
         /// <returns>The spatial coordinate when this operation is complete.</returns>
-        internal abstract Task<ISpatialCoordinate> LocalizeAsync(Role role, Guid token, Action<Action<BinaryWriter>> writeAndSendMessage, CancellationToken cancellationToken);
+        internal abstract Task<ISpatialCoordinate> LocalizeAsync(Guid token, Action<Action<BinaryWriter>> writeAndSendMessage, CancellationToken cancellationToken);
     }
 }
