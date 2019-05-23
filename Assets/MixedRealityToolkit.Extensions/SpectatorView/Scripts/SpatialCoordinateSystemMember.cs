@@ -17,11 +17,17 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
     /// </summary>
     internal class SpatialCoordinateSystemMember : DisposableBase
     {
+        public const string SpatialCoordinateSystemMemberMessageHeader = "MEMBER";
+        public ISpatialCoordinate spatialCoordinate = null;
+        public Vector3 OriginPositionInCoordinateSpace = Vector3.zero;
+        public Quaternion OriginRotationInCoordinateSpace = Quaternion.identity;
+
         private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private readonly CancellationToken cancellationToken;
 
         private readonly Role role;
         private readonly SocketEndpoint socketEndpoint;
+        private readonly Camera unityCamera;
         private readonly Func<GameObject> createSpatialCoordinateGO;
         private readonly bool debugLogging;
         private bool showDebugVisuals = false;
@@ -87,9 +93,9 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
                 }
 
                 DebugLog("Telling LocalizationMechanims to begin localizng");
-                ISpatialCoordinate coordinate = await spatialLocalizer.LocalizeAsync(role, token, WriteAndSendMessage, cancellationToken);
+                spatialCoordinate = await spatialLocalizer.LocalizeAsync(role, token, WriteAndSendMessage, cancellationToken);
 
-                if (coordinate == null)
+                if (spatialCoordinate == null)
                 {
                     Debug.LogError($"Failed to localize for spectator: {socketEndpoint.Address}");
                 }
@@ -100,13 +106,14 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
                     {
                         if (!cancellationToken.IsCancellationRequested)
                         {
+                            // TODO - figure out where this transform should be applied. It may be more practical in the spatial coordinate system manager.
                             spatialCoordinateGO = createSpatialCoordinateGO();
                             var spatialCoordinateLocalizer = spatialCoordinateGO.AddComponent<SpatialCoordinateLocalizer>();
                             spatialCoordinateLocalizer.debugLogging = debugLogging;
                             spatialCoordinateLocalizer.showDebugVisuals = showDebugVisuals;
                             spatialCoordinateLocalizer.debugVisual = debugVisual;
                             spatialCoordinateLocalizer.debugVisualScale = debugVisualScale;
-                            spatialCoordinateLocalizer.Coordinate = coordinate;
+                            spatialCoordinateLocalizer.Coordinate = spatialCoordinate;
                             DebugLog("Spatial coordinate created, coordinate set");
                         }
                     }
@@ -152,8 +159,28 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             }
         }
 
+        private void SendState()
+        {
+            DebugLog("Sending state information");
+            using (MemoryStream memoryStream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(memoryStream))
+            {
+                writer.Write(SpatialCoordinateSystemMemberMessageHeader);
+                writer.Write(spatialCoordinate.WorldToCoordinateSpace(Vector3.zero));
+                writer.Write(spatialCoordinate.WorldToCoordinateSpace(Quaternion.identity));
+                socketEndpoint.Send(memoryStream.ToArray());
+            }
+        }
+
         private bool TryProcessIncomingMessage(string command, BinaryReader reader)
         {
+            if (command == SpatialCoordinateSystemMemberMessageHeader)
+            {
+                OriginPositionInCoordinateSpace = reader.ReadVector3();
+                OriginRotationInCoordinateSpace = reader.ReadQuaternion();
+                DebugLog($"Obtained SpatialCoordinateSystemMember origin in coordinate space. Position: {OriginPositionInCoordinateSpace.ToString()}, Rotation: {OriginRotationInCoordinateSpace.ToString()}");
+            }
+
             return false;
         }
 
@@ -163,6 +190,8 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             using (MemoryStream memoryStream = new MemoryStream())
             using (BinaryWriter writer = new BinaryWriter(memoryStream))
             {
+                writer.Write(SpatialCoordinateSystemManager.SpatialCoordinateSystemMessageHeader);
+
                 // Allow the spatialLocalizer to write its own content to the binary writer with this function
                 callToWrite(writer);
 

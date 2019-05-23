@@ -53,7 +53,9 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         [Tooltip("Debug visual scale.")]
         public float debugVisualScale = 1.0f;
 
-        readonly string[] supportedCommands = { SpatialLocalizer.SpatialLocalizationMessageHeader };
+        public const string SpatialCoordinateSystemMessageHeader = "SPATIALCOORDSYS";
+        public const string SpatialCoordinateSystemCameraMessageHeader = "SPATIALCOORDSYSCAM";
+        readonly string[] supportedCommands = { SpatialCoordinateSystemMessageHeader };
         private Dictionary<SocketEndpoint, SpatialCoordinateSystemMember> members = new Dictionary<SocketEndpoint, SpatialCoordinateSystemMember>();
 
         public void OnConnected(SocketEndpoint endpoint)
@@ -75,7 +77,7 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             }
 
             DebugLog($"Creating new SpatialCoordinateSystemMember, Role: {spectatorView.Role}, IPAddress: {endpoint.Address}, SceneRoot: {transformedGameObject}, DebugLogging: {debugLogging}");
-            var member = new SpatialCoordinateSystemMember(spectatorView.Role, endpoint, () => transformedGameObject, debugLogging, showDebugVisuals, debugVisual, debugVisualScale);
+            var member = new SpatialCoordinateSystemMember(spectatorView.Role, endpoint, () => new GameObject(), debugLogging, showDebugVisuals, debugVisual, debugVisualScale);
             members[endpoint] = member;
             if (spatialLocalizer != null)
             {
@@ -99,13 +101,25 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
 
         public void HandleCommand(SocketEndpoint endpoint, string command, BinaryReader reader)
         {
-            if (!members.TryGetValue(endpoint, out var member))
+            if (command == SpatialCoordinateSystemMessageHeader)
             {
-                Debug.LogError("Received a message for an endpoint that had no associated spatial coordinate system member");
-            }
-            else
-            {
-                member.ReceiveMessage(command, reader);
+                string subCommand = reader.ReadString();
+
+                if (subCommand == SpatialCoordinateSystemCameraMessageHeader)
+                {
+                    // TODO - handle camera update information
+                }
+                else
+                {
+                    if (!members.TryGetValue(endpoint, out var member))
+                    {
+                        Debug.LogError("Received a message for an endpoint that had no associated spatial coordinate system member");
+                    }
+                    else
+                    {
+                        member.ReceiveMessage(subCommand, reader);
+                    }
+                }
             }
         }
 
@@ -118,6 +132,11 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         {
             UnregisterCommands();
             CleanUpMembers();
+        }
+
+        private void Update()
+        {
+            SendCameraReport();
         }
 
         private void RegisterCommands()
@@ -154,6 +173,11 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             {
                 Debug.Log($"SpatialCoordinateSystemManager: {message}");
             }
+        }
+
+        private void SendCameraReport()
+        {
+            // TOOD - send camera update, add both SpatialCoordinateSystemMessageHeader and SpatialCoordinateSystemCameraMessageHeader headers
         }
     }
 }
