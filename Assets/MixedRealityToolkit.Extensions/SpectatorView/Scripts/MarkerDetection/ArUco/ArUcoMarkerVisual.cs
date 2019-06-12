@@ -132,6 +132,13 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView.M
             }
         }
 
+        /// <inheritdoc />
+        public bool TryGetMaxId(out int maxId)
+        {
+            maxId = cCodes.Length - 1;
+            return true;
+        }
+
         private float GetMarkerSizeInPixels()
         {
             float dpi = Screen.dpi;

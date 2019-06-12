@@ -35,9 +35,14 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         private Vector3 markerVisualRotation = new Vector3(0, 180, 0);
 
         private MarkerVisualCoordinateService markerVisualCoordinateService = null;
-        private TaskCompletionSource<bool> markerFound = null;
-        private int markerId = 0;
-        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private TaskCompletionSource<string> coordinateAssigned = null;
+        private TaskCompletionSource<string> coordinateFound = null;
+        private CancellationTokenSource discoveryCTS = new CancellationTokenSource();
+        private string coordinateId = string.Empty;
+
+        public const string MarkerVisualDiscoveryHeader = "MARKERVISUALLOC";
+        public const string CoordinateAssignedHeader = "ASSIGNID";
+        public const string CoordinateFoundHeader = "COORDFOUND";
 
 #if UNITY_EDITOR
         private void OnValidate()
@@ -46,7 +51,7 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
         }
 #endif
 
-        protected override ISpatialCoordinateService SpatialCoordinateService => throw new NotImplementedException();
+        protected override ISpatialCoordinateService SpatialCoordinateService => markerVisualCoordinateService;
 
         private void Awake()
         {
@@ -59,62 +64,113 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             }
 
             var markerToCamera = Matrix4x4.TRS(markerVisualPosition, Quaternion.Euler(markerVisualRotation), Vector3.one);
-            markerVisualCoordinateService = new MarkerVisualCoordinateService(markerVisual, markerToCamera, cameraTransform);
+            markerVisualCoordinateService = new MarkerVisualCoordinateService(markerVisual, markerToCamera, cameraTransform, debugLogging);
         }
 
-        internal async override Task<Guid> InitializeAsync(bool actAsHost, CancellationToken cancellationToken)
+        internal override Task<Guid> InitializeAsync(bool actAsHost, CancellationToken cancellationToken)
         {
             Guid token = Guid.NewGuid();
-            markerFound?.SetCanceled();
-            markerFound = new TaskCompletionSource<bool>();
-            return token;
+
+            coordinateId = string.Empty;
+            coordinateAssigned?.SetCanceled();
+            coordinateAssigned = new TaskCompletionSource<string>();
+
+            coordinateFound?.SetCanceled();
+            coordinateFound = new TaskCompletionSource<string>();
+
+            DebugLog("Initialized", token);
+            return Task.FromResult(token);
         }
 
         internal async override Task<ISpatialCoordinate> LocalizeAsync(bool actAsHost, Guid token, Action<Action<BinaryWriter>> writeAndSendMessage, CancellationToken cancellationToken)
         {
-            lock(cancellationTokenSource)
+            DebugLog("Localizing", token);
+            if (!TrySendMarkerVisualDiscoveryMessage(writeAndSendMessage))
             {
-                if (cancellationTokenSource.Token.CanBeCanceled)
-                {
-                    cancellationTokenSource.Cancel();
-                    cancellationTokenSource.Dispose();
-                }
-
-                cancellationTokenSource = new CancellationTokenSource();
+                Debug.LogWarning("Failed to send marker visual discovery message, spatial localization failed.");
+                return null;
             }
 
+            // Receive marker to show
+            DebugLog("Waiting to have a coordinate id assigned", token);
+            await Task.WhenAny(coordinateAssigned.Task, Task.Delay(-1, cancellationToken));
+            if (coordinateId == string.Empty)
+            {
+                DebugLog("Failed to assign coordinate id", token);
+                return null;
+            }
+
+            DebugLog($"Coordinate assigned: {coordinateId}", token);
             ISpatialCoordinate coordinate = null;
-            if (await markerVisualCoordinateService.TryDiscoverCoordinatesAsync(cancellationTokenSource.Token, new string[] { markerId.ToString() }))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(discoveryCTS.Token, cancellationToken))
             {
-                if (!markerVisualCoordinateService.TryGetKnownCoordinate(markerId.ToString(), out coordinate))
+                DebugLog($"Attempting to discover the associated marker: {coordinateId}", token);
+                if (await markerVisualCoordinateService.TryDiscoverCoordinatesAsync(cts.Token, new string[] { coordinateId.ToString() }))
                 {
-                    DebugLog("Failed to find spatial coordinate although discovery completed.", token);
+                    DebugLog($"Marker discovery completed: {coordinateId}", token);
+                    if (!markerVisualCoordinateService.TryGetKnownCoordinate(coordinateId, out coordinate))
+                    {
+                        DebugLog("Failed to find spatial coordinate although discovery completed.", token);
+                    }
                 }
             }
 
-            await Task.WhenAny(markerFound.Task, Task.Delay(-1, cancellationToken));
-
-            lock(cancellationTokenSource)
-            {
-                cancellationTokenSource.Cancel();
-                cancellationTokenSource.Dispose();
-            }
+            // Wait for marker to be found
+            DebugLog($"Waiting for the coordinate to be found: {coordinateId}", token);
+            await Task.WhenAny(coordinateFound.Task, Task.Delay(-1, cancellationToken));
 
             return coordinate;
         }
 
         internal override void ProcessIncomingMessage(bool actAsHost, Guid token, string command, BinaryReader r)
         {
-            markerFound.TrySetResult(true);
+            DebugLog($"Received command: {command}", token);
+            switch (command)
+            {
+                case CoordinateAssignedHeader:
+                    coordinateId = r.ReadString();
+                    DebugLog($"Assigned coordinate id: {coordinateId}", token);
+                    coordinateAssigned?.SetResult(coordinateId);
+                    break;
+                case CoordinateFoundHeader:
+                    discoveryCTS.Cancel();
+                    string detectedId = r.ReadString();
+                    if (coordinateId == detectedId)
+                    {
+                        DebugLog($"Coordinate was found: {coordinateId}", token);
+                        coordinateFound?.SetResult(detectedId);
+                    }
+                    else
+                    {
+                        DebugLog($"Unexpected coordinate found, expected: {coordinateId}, detected: {detectedId}", token);
+                    }
+                    break;
+                default:
+                    DebugLog($"Sent unknown command: {command}", token);
+                    break;
+            }
         }
 
         internal override void Uninitialize(bool actAsHost, Guid token)
         {
-            lock (cancellationTokenSource)
+        }
+
+        private bool TrySendMarkerVisualDiscoveryMessage(Action<Action<BinaryWriter>> writeAndSendMessage)
+        {
+            if (markerVisual.TryGetMaxId(out var maxId))
             {
-                cancellationTokenSource.Cancel();
-                cancellationTokenSource.Dispose();
+                DebugLog($"Sending maximum id for discovery: {maxId}", Guid.NewGuid()); // todo - fix
+                writeAndSendMessage(writer =>
+                {
+                    writer.Write(MarkerVisualDiscoveryHeader);
+                    writer.Write(maxId);
+                });
+
+                return true;
             }
+
+            DebugLog("Unable to obtain max id from marker visual", Guid.NewGuid()); // add token or remove token
+            return false;
         }
     }
 }

@@ -24,5 +24,12 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.MarkerDetection
         /// </summary>
         /// <param name="size">The physical size (in meters) that markers should be when shown</param>
         void SetMarkerSize(float size);
+
+        /// <summary>
+        /// Call to determine the max marker id that can be shown by the marker visual
+        /// </summary>
+        /// <param name="maxId">The max marker id that can be shown</param>
+        /// <returns>Returns true if a max id exists, otherwise False.</returns>
+        bool TryGetMaxId(out int maxId);
     }
 }

@@ -73,8 +73,6 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
             Debug.Log($"SpectatorView is running as: {Role.ToString()}. Expected User IPAddress: {userIpAddress}");
 
             if (stateSynchronizationSceneManager == null ||
-                stateSynchronizationBroadcaster == null ||
-                stateSynchronizationObserver == null ||
                 (broadcastedContent == null && Role == Role.User) ||
                 parentOfMainCamera == null)
             {

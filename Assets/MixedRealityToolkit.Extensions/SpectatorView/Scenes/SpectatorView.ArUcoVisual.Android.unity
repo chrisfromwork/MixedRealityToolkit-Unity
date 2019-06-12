@@ -210,7 +210,7 @@ PrefabInstance:
     - target: {fileID: 4508365558891885845, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
         type: 3}
       propertyPath: m_Name
-      value: SpectatorView.ArUco.Android
+      value: SpectatorView.ArUcoVisual.Android
       objectReference: {fileID: 0}
     - target: {fileID: 4508365558891885846, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
         type: 3}
@@ -272,6 +272,21 @@ PrefabInstance:
       propertyPath: parentOfMainCamera
       value: 
       objectReference: {fileID: 1855549803}
+    - target: {fileID: 4508365558891885847, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
+        type: 3}
+      propertyPath: userIpAddress
+      value: 10.89.160.62
+      objectReference: {fileID: 0}
+    - target: {fileID: 4508365558797187662, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
+        type: 3}
+      propertyPath: spectatorView
+      value: 
+      objectReference: {fileID: 4508365557358431677}
+    - target: {fileID: 4508365558797187662, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
+        type: 3}
+      propertyPath: spatialLocalizer
+      value: 
+      objectReference: {fileID: 4508365557358431678}
     - target: {fileID: 4508365558797187660, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
         type: 3}
       propertyPath: cameraTransform
@@ -279,3 +294,27 @@ PrefabInstance:
       objectReference: {fileID: 97747992}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 22a4aa366f34bb74cb146f3e1e2480d3, type: 3}
+--- !u!114 &4508365557358431677 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4508365558891885847, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
+    type: 3}
+  m_PrefabInstance: {fileID: 4508365557358431676}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5abc500b6b39d464880ebe2221b093f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4508365557358431678 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4508365558797187660, guid: 22a4aa366f34bb74cb146f3e1e2480d3,
+    type: 3}
+  m_PrefabInstance: {fileID: 4508365557358431676}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb7df3086d59694fb64dc4bfa5ed5bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

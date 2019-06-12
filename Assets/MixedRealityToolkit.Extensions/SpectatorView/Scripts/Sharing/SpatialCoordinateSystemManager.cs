@@ -164,11 +164,20 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
                     StateSynchronizationObserver.Instance.Disconnected += OnDisconnected;
                     StateSynchronizationObserver.Instance.RegisterCommandHandler(command, HandleCommand);
                 }
+                else
+                {
+                    DebugLog("Didnt subscribe to network events for the StateSynchronizationObserver.");
+                }
+
                 if (StateSynchronizationBroadcaster.IsInitialized)
                 {
                     StateSynchronizationBroadcaster.Instance.Connected += OnConnected;
                     StateSynchronizationBroadcaster.Instance.Disconnected += OnDisconnected;
                     StateSynchronizationBroadcaster.Instance.RegisterCommandHandler(command, HandleCommand);
+                }
+                else
+                {
+                    DebugLog("Didnt subscribe to network events for the StateSynchronizationBroadcaster.");
                 }
             }
         }
@@ -184,11 +193,20 @@ namespace Microsoft.MixedReality.Toolkit.Extensions.Experimental.SpectatorView
                     StateSynchronizationObserver.Instance.Disconnected -= OnDisconnected;
                     StateSynchronizationObserver.Instance.UnregisterCommandHandler(command, HandleCommand);
                 }
+                else
+                {
+                    DebugLog("Didnt unsubscribe to network events for the StateSynchronizationObserver.");
+                }
+
                 if (StateSynchronizationBroadcaster.IsInitialized)
                 {
                     StateSynchronizationBroadcaster.Instance.Connected -= OnConnected;
                     StateSynchronizationBroadcaster.Instance.Disconnected -= OnDisconnected;
                     StateSynchronizationBroadcaster.Instance.UnregisterCommandHandler(command, HandleCommand);
+                }
+                else
+                {
+                    DebugLog("Didnt unsubscribe to network events for the StateSynchronizationBroadcaster.");
                 }
             }
         }
